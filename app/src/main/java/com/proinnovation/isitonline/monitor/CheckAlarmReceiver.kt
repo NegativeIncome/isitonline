@@ -24,17 +24,27 @@ class CheckAlarmReceiver : BroadcastReceiver() {
                     async { checker.checkSite(site).map { site to it } }
                 }.awaitAll().flatten()
 
-                for ((site, result) in allResults) {
-                    app.repository.insertResult(result)
+                // Group by site so PING can serve as a tiebreaker for HTTPS failures.
+                // PING-only failures never trigger notifications (ICMP is often blocked).
+                val resultsBySite = allResults.groupBy { (site, _) -> site }
+                for ((site, siteResults) in resultsBySite) {
+                    val httpsResult = siteResults.find { (_, r) -> r.checkType == "HTTPS" }?.second
+                    val pingResult  = siteResults.find { (_, r) -> r.checkType == "PING"  }?.second
 
-                    val shouldNotify = app.retryTracker.record(
-                        result.siteId, result.checkType, result.success
-                    )
-                    if (shouldNotify) {
-                        notifier.showFailureNotification(site, result.checkType)
-                    } else if (result.success) {
-                        notifier.cancelNotification(result.siteId, result.checkType)
+                    siteResults.forEach { (_, result) -> app.repository.insertResult(result) }
+
+                    if (httpsResult != null) {
+                        val shouldNotify = app.retryTracker.record(site.id, "HTTPS", httpsResult.success)
+                        when {
+                            shouldNotify && pingResult?.success == false ->
+                                notifier.showFailureNotification(site, "HTTPS")
+                            httpsResult.success ->
+                                notifier.cancelNotification(site.id, "HTTPS")
+                        }
                     }
+
+                    // Cancel any stale PING-only notifications from before this change
+                    notifier.cancelNotification(site.id, "PING")
                 }
 
                 app.repository.purgeOldResults()
