@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="Schedule">
+
+        <EditTextPreference
+            app:key="day_start_hour"
+            app:title="Daytime start hour"
+            app:summary="Hour (0–23) when 30-minute checks begin. Default: 7"
+            app:defaultValue="7"
+            app:useSimpleSummaryProvider="false" />
+
+        <EditTextPreference
+            app:key="day_end_hour"
+            app:title="Daytime end hour"
+            app:summary="Hour (0–23) when 2-hour overnight checks begin. Default: 22"
+            app:defaultValue="22"
+            app:useSimpleSummaryProvider="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="Permissions">
+
+        <Preference
+            app:key="pref_exact_alarm"
+            app:title="Allow exact alarms"
+            app:summary="Required for precise check timing on Android 12+. Tap to open system settings." />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

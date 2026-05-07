@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IsItOnline</string>
+    <string name="add_site">Add site</string>
+    <string name="delete_site">Delete site</string>
+    <string name="settings">Settings</string>
+    <string name="url_hint">URL or hostname</string>
+    <string name="label_hint">Label (optional)</string>
+</resources>
