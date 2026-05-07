@@ -43,7 +43,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:textAppearance="?attr/textAppearanceBodySmall"
-            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textColor="?android:attr/textColorSecondary"
             app:layout_constraintStart_toEndOf="@id/viewStatusDot"
             app:layout_constraintEnd_toStartOf="@id/switchEnabled"
             app:layout_constraintTop_toBottomOf="@id/tvLabel" />
