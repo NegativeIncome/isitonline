@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.proinnovation.isitonline.databinding.ActivityMainBinding
 import com.proinnovation.isitonline.monitor.CheckScheduler
 import com.proinnovation.isitonline.ui.AddSiteDialog
+import com.proinnovation.isitonline.ui.HistoryActivity
 import com.proinnovation.isitonline.ui.MainViewModel
 import com.proinnovation.isitonline.ui.SettingsActivity
 import com.proinnovation.isitonline.ui.SitesAdapter
@@ -36,7 +37,8 @@ class MainActivity : AppCompatActivity(), AddSiteDialog.Listener {
 
         adapter = SitesAdapter(
             onDelete = { site -> viewModel.deleteSite(site) },
-            onToggle = { site -> viewModel.toggleEnabled(site) }
+            onToggle = { site -> viewModel.toggleEnabled(site) },
+            onItemClick = { item -> HistoryActivity.start(this, item.site.id, item.site.label) }
         )
         binding.recyclerView.adapter = adapter
         binding.recyclerView.layoutManager = LinearLayoutManager(this)

@@ -16,7 +16,8 @@ import java.util.*
 
 class SitesAdapter(
     private val onDelete: (Site) -> Unit,
-    private val onToggle: (Site) -> Unit
+    private val onToggle: (Site) -> Unit,
+    private val onItemClick: (SiteWithStatus) -> Unit
 ) : RecyclerView.Adapter<SitesAdapter.SiteViewHolder>() {
 
     private var items: List<SiteWithStatus> = emptyList()
@@ -67,6 +68,7 @@ class SitesAdapter(
             b.switchEnabled.isChecked = item.site.isEnabled
             b.switchEnabled.setOnCheckedChangeListener { _, _ -> onToggle(item.site) }
             b.btnDelete.setOnClickListener { onDelete(item.site) }
+            b.root.setOnClickListener { onItemClick(item) }
         }
 
         private fun formatResult(result: LatestCheckResult?, label: String): String {

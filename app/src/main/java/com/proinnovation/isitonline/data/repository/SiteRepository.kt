@@ -14,6 +14,9 @@ class SiteRepository(private val dao: SiteDao) {
     suspend fun getEnabledSites(): List<Site> = dao.getEnabledSites()
     suspend fun insertResult(result: SiteCheckResult) = dao.insertResult(result)
 
+    fun getResultsForSite(siteId: Long): LiveData<List<SiteCheckResult>> =
+        dao.getResultsForSiteLive(siteId)
+
     suspend fun purgeOldResults() {
         val cutoff = System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L
         dao.purgeOldResults(cutoff)

@@ -27,6 +27,9 @@ interface SiteDao {
     @Query("SELECT * FROM LatestCheckResult")
     fun getLatestResultsLive(): LiveData<List<LatestCheckResult>>
 
+    @Query("SELECT * FROM check_results WHERE siteId = :siteId ORDER BY checkedAt DESC LIMIT 200")
+    fun getResultsForSiteLive(siteId: Long): LiveData<List<SiteCheckResult>>
+
     @Query("DELETE FROM check_results WHERE checkedAt < :cutoff")
     suspend fun purgeOldResults(cutoff: Long)
 }
