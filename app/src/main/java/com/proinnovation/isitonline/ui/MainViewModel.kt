@@ -5,8 +5,12 @@ import android.net.Uri
 import androidx.lifecycle.*
 import com.proinnovation.isitonline.IsItOnlineApp
 import com.proinnovation.isitonline.data.db.*
+import com.proinnovation.isitonline.monitor.CheckScheduler
+import com.proinnovation.isitonline.monitor.MonitorRunner
 import com.proinnovation.isitonline.notification.AlertNotifier
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -33,6 +37,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             addSource(repo.allSitesLive) { sites = it; combine() }
             addSource(repo.latestResultsLive) { results = it; combine() }
         }
+
+    private val _isRefreshing = MutableLiveData(false)
+    val isRefreshing: LiveData<Boolean> = _isRefreshing
+
+    fun checkNow() {
+        if (_isRefreshing.value == true) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                withContext(Dispatchers.IO) { MonitorRunner.runChecks(app) }
+                if (app.retryTracker.hasActiveRetries()) {
+                    CheckScheduler.scheduleRetry(app)
+                } else {
+                    CheckScheduler.cancelRetry(app)
+                    CheckScheduler.scheduleNext(app)
+                }
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
 
     fun addSite(url: String, rawLabel: String) {
         val label = rawLabel.ifBlank { Uri.parse(url).host ?: url }

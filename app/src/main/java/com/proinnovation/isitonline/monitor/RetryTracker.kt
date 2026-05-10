@@ -28,7 +28,9 @@ class RetryTracker(context: Context) {
             persist(k, 0)
             false
         } else {
-            val next = (counts[k] ?: 0) + 1
+            val current = counts[k] ?: 0
+            if (current >= MAX_RETRIES) return false   // already notified; wait for recovery
+            val next = current + 1
             counts[k] = next
             persist(k, next)
             next == MAX_RETRIES

@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.proinnovation.isitonline.databinding.ActivityMainBinding
@@ -47,15 +48,22 @@ class MainActivity : AppCompatActivity(), AddSiteDialog.Listener {
             adapter.submitList(items)
         }
 
+        viewModel.isRefreshing.observe(this) { refreshing ->
+            binding.progressBar.isVisible = refreshing
+        }
+
         binding.fabAddSite.setOnClickListener {
             AddSiteDialog().show(supportFragmentManager, "add_site")
         }
 
         binding.toolbar.setOnMenuItemClickListener { item ->
-            if (item.itemId == R.id.action_settings) {
-                startActivity(Intent(this, SettingsActivity::class.java))
-                true
-            } else false
+            when (item.itemId) {
+                R.id.action_check_now -> { viewModel.checkNow(); true }
+                R.id.action_settings -> {
+                    startActivity(Intent(this, SettingsActivity::class.java)); true
+                }
+                else -> false
+            }
         }
 
         requestNotificationPermission()
