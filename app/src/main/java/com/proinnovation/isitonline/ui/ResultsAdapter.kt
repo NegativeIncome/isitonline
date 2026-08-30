@@ -51,7 +51,7 @@ class ResultsAdapter : ListAdapter<SiteCheckResult, ResultsAdapter.ViewHolder>(D
 
             b.tvCheckType.text = result.checkType
             b.tvTimestamp.text = formatTimestamp(result.checkedAt)
-            b.tvDetails.text = if (result.success) {
+            val summary = if (result.success) {
                 buildString {
                     append("✓")
                     result.responseCode?.let { append("  $it") }
@@ -61,6 +61,12 @@ class ResultsAdapter : ListAdapter<SiteCheckResult, ResultsAdapter.ViewHolder>(D
             } else {
                 "✗  ${result.errorMessage ?: "failed"}"
             }
+            // On a failure, append the captured network-state snapshot so the log
+            // shows what the device network looked like at the moment it failed.
+            b.tvDetails.text = if (!result.success && !result.diagnostics.isNullOrBlank())
+                "$summary\n${result.diagnostics}"
+            else
+                summary
         }
     }
 

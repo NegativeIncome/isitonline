@@ -22,5 +22,6 @@ data class SiteCheckResult(
     val success: Boolean,
     val responseCode: Int?,     // HTTP status code; null for ping
     val latencyMs: Long?,
-    val errorMessage: String?
+    val errorMessage: String?,
+    val diagnostics: String? = null   // network-state snapshot captured at check time (see NetworkDiagnostics)
 )

@@ -23,5 +23,6 @@ data class LatestCheckResult(
     val success: Boolean,
     val responseCode: Int?,
     val latencyMs: Long?,
-    val errorMessage: String?
+    val errorMessage: String?,
+    val diagnostics: String?
 )

@@ -18,7 +18,7 @@ object MonitorRunner {
 
         val allResults = coroutineScope {
             sites.map { site ->
-                async { checker.checkSite(site).map { site to it } }
+                async { checker.checkSite(context, site).map { site to it } }
             }.flatMap { it.await() }
         }
 

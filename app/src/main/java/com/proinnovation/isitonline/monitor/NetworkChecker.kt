@@ -1,5 +1,6 @@
 package com.proinnovation.isitonline.monitor
 
+import android.content.Context
 import android.net.Uri
 import com.proinnovation.isitonline.data.db.Site
 import com.proinnovation.isitonline.data.db.SiteCheckResult
@@ -17,12 +18,18 @@ class NetworkChecker {
         .followRedirects(true)
         .build()
 
-    suspend fun checkSite(site: Site): List<SiteCheckResult> = withContext(Dispatchers.IO) {
-        listOf(checkHttps(site), checkPing(site))
+    suspend fun checkSite(context: Context, site: Site): List<SiteCheckResult> = withContext(Dispatchers.IO) {
+        // One network-state snapshot per check cycle, shared by both sub-checks.
+        val snapshot = NetworkDiagnostics.snapshot(context.applicationContext)
+        listOf(checkHttps(site, snapshot), checkPing(site, snapshot))
     }
 
-    private fun checkHttps(site: Site): SiteCheckResult {
+    private fun checkHttps(site: Site, snapshot: String): SiteCheckResult {
         val start = System.currentTimeMillis()
+        val host = Uri.parse(site.url).host ?: site.url
+        // Resolve independently of OkHttp so the log distinguishes a DNS failure
+        // from a connection failure regardless of how the HTTP call ends up.
+        val diagnostics = "$snapshot | ${NetworkDiagnostics.resolve(host)}"
         return try {
             val headRequest = Request.Builder().url(site.url).head().build()
             val response = client.newCall(headRequest).execute()
@@ -40,7 +47,8 @@ class NetworkChecker {
                 SiteCheckResult(
                     siteId = site.id, checkType = "HTTPS", checkedAt = start,
                     success = success, responseCode = getCode, latencyMs = latency,
-                    errorMessage = if (success) null else "HTTP $getCode"
+                    errorMessage = if (success) null else "HTTP $getCode",
+                    diagnostics = diagnostics
                 )
             } else {
                 val latency = System.currentTimeMillis() - start
@@ -48,19 +56,21 @@ class NetworkChecker {
                 SiteCheckResult(
                     siteId = site.id, checkType = "HTTPS", checkedAt = start,
                     success = success, responseCode = code, latencyMs = latency,
-                    errorMessage = if (success) null else "HTTP $code"
+                    errorMessage = if (success) null else "HTTP $code",
+                    diagnostics = diagnostics
                 )
             }
         } catch (e: Exception) {
             SiteCheckResult(
                 siteId = site.id, checkType = "HTTPS", checkedAt = start,
                 success = false, responseCode = null, latencyMs = null,
-                errorMessage = e.message ?: "Unknown error"
+                errorMessage = "${e.javaClass.simpleName}: ${e.message ?: "Unknown error"}",
+                diagnostics = diagnostics
             )
         }
     }
 
-    private fun checkPing(site: Site): SiteCheckResult {
+    private fun checkPing(site: Site, snapshot: String): SiteCheckResult {
         val start = System.currentTimeMillis()
         return try {
             val host = Uri.parse(site.url).host ?: site.url
@@ -71,7 +81,8 @@ class NetworkChecker {
                 return SiteCheckResult(
                     siteId = site.id, checkType = "PING", checkedAt = start,
                     success = false, responseCode = null, latencyMs = null,
-                    errorMessage = "Ping timed out"
+                    errorMessage = "Ping timed out",
+                    diagnostics = snapshot
                 )
             }
             val exitCode = proc.exitValue()
@@ -81,13 +92,15 @@ class NetworkChecker {
                 siteId = site.id, checkType = "PING", checkedAt = start,
                 success = success, responseCode = null,
                 latencyMs = if (success) latency else null,
-                errorMessage = if (success) null else "Ping failed (exit $exitCode)"
+                errorMessage = if (success) null else "Ping failed (exit $exitCode)",
+                diagnostics = snapshot
             )
         } catch (e: Exception) {
             SiteCheckResult(
                 siteId = site.id, checkType = "PING", checkedAt = start,
                 success = false, responseCode = null, latencyMs = null,
-                errorMessage = e.message ?: "Unknown error"
+                errorMessage = "${e.javaClass.simpleName}: ${e.message ?: "Unknown error"}",
+                diagnostics = snapshot
             )
         }
     }
