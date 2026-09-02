@@ -6,4 +6,6 @@
     <string name="settings">Settings</string>
     <string name="url_hint">URL or hostname</string>
     <string name="label_hint">Label (optional)</string>
+    <string name="exact_alarm_prompt">Checks may be delayed up to an hour without the exact-alarm permission.</string>
+    <string name="exact_alarm_grant">Grant</string>
 </resources>

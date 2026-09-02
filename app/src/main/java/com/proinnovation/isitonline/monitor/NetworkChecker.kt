@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class NetworkChecker {
@@ -21,7 +22,9 @@ class NetworkChecker {
     suspend fun checkSite(context: Context, site: Site): List<SiteCheckResult> = withContext(Dispatchers.IO) {
         // One network-state snapshot per check cycle, shared by both sub-checks.
         val snapshot = NetworkDiagnostics.snapshot(context.applicationContext)
-        listOf(checkHttps(site, snapshot), checkPing(site, snapshot))
+        // checkPing returns null when the platform blocks ICMP outright (SELinux on
+        // untrusted apps, Android 10+) — that's "no signal", not a reachability failure.
+        listOfNotNull(checkHttps(site, snapshot), checkPing(site, snapshot))
     }
 
     private fun checkHttps(site: Site, snapshot: String): SiteCheckResult {
@@ -70,7 +73,14 @@ class NetworkChecker {
         }
     }
 
-    private fun checkPing(site: Site, snapshot: String): SiteCheckResult {
+    /**
+     * Returns null when `ping` cannot run on this device at all — the SELinux
+     * policy for untrusted apps blocks raw ICMP sockets on Android 10+, so `exec`
+     * throws or the binary exits complaining it lacks permission. A null result is
+     * dropped rather than logged as a reachability failure, and callers must not
+     * read it as "the host is down".
+     */
+    private fun checkPing(site: Site, snapshot: String): SiteCheckResult? {
         val start = System.currentTimeMillis()
         return try {
             val host = Uri.parse(site.url).host ?: site.url
@@ -88,6 +98,7 @@ class NetworkChecker {
             val exitCode = proc.exitValue()
             val latency = System.currentTimeMillis() - start
             val success = exitCode == 0
+            if (!success && isPingBlocked(proc)) return null
             SiteCheckResult(
                 siteId = site.id, checkType = "PING", checkedAt = start,
                 success = success, responseCode = null,
@@ -95,6 +106,10 @@ class NetworkChecker {
                 errorMessage = if (success) null else "Ping failed (exit $exitCode)",
                 diagnostics = snapshot
             )
+        } catch (e: IOException) {
+            // exec itself was denied (e.g. "error=13, Permission denied") — ping is
+            // unavailable on this device, not a signal about the host.
+            null
         } catch (e: Exception) {
             SiteCheckResult(
                 siteId = site.id, checkType = "PING", checkedAt = start,
@@ -103,5 +118,14 @@ class NetworkChecker {
                 diagnostics = snapshot
             )
         }
+    }
+
+    /** True when ping ran but its stderr shows the OS denied it a socket. */
+    private fun isPingBlocked(proc: Process): Boolean = try {
+        val err = proc.errorStream.bufferedReader().readText()
+        listOf("Operation not permitted", "Permission denied", "socket: Address family")
+            .any { err.contains(it, ignoreCase = true) }
+    } catch (e: Exception) {
+        false
     }
 }

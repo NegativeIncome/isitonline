@@ -32,7 +32,10 @@ object MonitorRunner {
             if (httpsResult != null) {
                 val shouldNotify = app.retryTracker.record(site.id, "HTTPS", httpsResult.success)
                 when {
-                    shouldNotify && pingResult?.success == false ->
+                    // Notify on a confirmed HTTPS outage unless PING proves the host
+                    // is actually reachable. A missing PING result (platform blocked
+                    // it) is not proof of reachability, so it must not suppress.
+                    shouldNotify && pingResult?.success != true ->
                         notifier.showFailureNotification(site, "HTTPS")
                     httpsResult.success ->
                         notifier.cancelNotification(site.id, "HTTPS")
